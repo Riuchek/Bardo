@@ -8,18 +8,27 @@ package graph
 import (
 	"context"
 	"fmt"
-
+	"os"
+	"encoding/json"
 	"github.com/riuchek/api/graph/model"
 )
 
-// CreateTodo is the resolver for the createTodo field.
-func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) (*model.Todo, error) {
-	panic(fmt.Errorf("not implemented: CreateTodo - createTodo"))
+// CreateStory is the resolver for the createStory field.
+func (r *mutationResolver) CreateStory(ctx context.Context, input model.NewStory) (*model.Story, error) {
+	panic(fmt.Errorf("not implemented: CreateStory - createStory"))
 }
 
-// BardoTale is the resolver for the bardoTale field.
-func (r *queryResolver) BardoTale(ctx context.Context) (*model.Story, error) {
-	panic(fmt.Errorf("not implemented: BardoTale - bardoTale"))
+// Stories is the resolver for the stories field.
+func (r *queryResolver) Stories(ctx context.Context) ([]*model.Story, error) {
+	panic(fmt.Errorf("not implemented: Stories - stories"))
+}
+
+// TestStories is the resolver for the testStories field.
+func (r *queryResolver) TestStories(ctx context.Context) ([]*model.Story, error) {
+	content, _ := os.ReadFile("data/test_stories.json")
+	var stories []*model.Story
+	json.Unmarshal(content, &stories)
+	return stories, nil
 }
 
 // Mutation returns MutationResolver implementation.

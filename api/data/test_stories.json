@@ -1,0 +1,26 @@
+[
+  {
+    "id": "1",
+    "title": "A Lenda do Bardo",
+    "content": "Dados vindos de um arquivo JSON no servidor Go!",
+    "year": 2026
+  },
+  {
+    "id": "2",
+    "title": "O Viajante do Tempo",
+    "content": "Era uma vez um bardo que atravessou montanhas e mares em busca da melodia perdida.",
+    "year": 2025
+  },
+  {
+    "id": "3",
+    "title": "A Taverna no Fim do Mundo",
+    "content": "Na última taverna da estrada, histórias e canções se misturam até o amanhecer.",
+    "year": 2024
+  },
+  {
+    "id": "4",
+    "title": "A Harpa Silenciosa",
+    "content": "Só quem ouve o silêncio pode fazer a harpa cantar novamente.",
+    "year": 2026
+  }
+]

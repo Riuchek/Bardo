@@ -3,26 +3,24 @@
 # https://gqlgen.com/getting-started/
 
 type Story {
+  id: ID!
   title: String!
   content: String!
   year: Int!
 }
 
-type Todo {
-  id: ID!
-  text: String!
-  done: Boolean!
-}
-
-input NewTodo {
-  text: String!
+input NewStory {
+  title: String!
+  content: String!
+  year: Int!
 }
 
 type Query {
- bardoTale: Story!
+ stories: [Story!]!
+ testStories: [Story!]!
 }
 
 
 type Mutation {
-  createTodo(input: NewTodo!): Todo!
+  createStory(input: NewStory!): Story!
 }
