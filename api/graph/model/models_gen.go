@@ -6,21 +6,20 @@ type Mutation struct {
 }
 
 type NewTodo struct {
-	Text   string `json:"text"`
-	UserID string `json:"userId"`
+	Text string `json:"text"`
 }
 
 type Query struct {
+}
+
+type Story struct {
+	Title   string `json:"title"`
+	Content string `json:"content"`
+	Year    int32  `json:"year"`
 }
 
 type Todo struct {
 	ID   string `json:"id"`
 	Text string `json:"text"`
 	Done bool   `json:"done"`
-	User *User  `json:"user"`
-}
-
-type User struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
 }

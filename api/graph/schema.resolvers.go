@@ -17,9 +17,9 @@ func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) 
 	panic(fmt.Errorf("not implemented: CreateTodo - createTodo"))
 }
 
-// Todos is the resolver for the todos field.
-func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
-	panic(fmt.Errorf("not implemented: Todos - todos"))
+// BardoTale is the resolver for the bardoTale field.
+func (r *queryResolver) BardoTale(ctx context.Context) (*model.Story, error) {
+	panic(fmt.Errorf("not implemented: BardoTale - bardoTale"))
 }
 
 // Mutation returns MutationResolver implementation.
