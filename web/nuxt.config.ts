@@ -2,5 +2,12 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['@nuxt/a11y', '@nuxt/eslint', '@nuxt/test-utils']
+  modules: ['@nuxtjs/apollo'],
+  apollo: {
+    clients: {
+      default: {
+        httpEndpoint: 'http://localhost:8080/query',
+      }
+    }
+  }
 })
