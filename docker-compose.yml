@@ -1,0 +1,44 @@
+
+services:
+  # 1. Banco de Dados
+  db:
+    image: postgres:15-alpine
+    container_name: bardo_db
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: bardo_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. Backend (Go)
+  api:
+    build: ./api
+    container_name: bardo_api
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: user
+      DB_PASSWORD: password
+      DB_NAME: bardo_db
+    depends_on:
+      - db
+
+  # 3. Frontend (Nuxt 4)
+  web:
+    build: ./web
+    container_name: bardo_web
+    ports:
+      - "3000:3000"
+    environment:
+      NUXT_PUBLIC_APOLLO_HTTP_ENDPOINT: http://localhost:8080/query
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
