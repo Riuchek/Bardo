@@ -1,26 +1,56 @@
-# GraphQL schema example
-#
-# https://gqlgen.com/getting-started/
-
-type Story {
+type User {
   id: ID!
-  title: String!
-  content: String!
-  year: Int!
+  username: String!
+  email: String!
 }
 
-input NewStory {
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
+input RegisterInput {
+  username: String!
+  email: String!
+  password: String!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+input UpdateWorldInput {
+  name: String
+  description: String
+}
+
+type World {
+  id: ID!
+  name: String!
+  description: String
+}
+
+type Backstory {
+  id: ID!
   title: String!
+  characterName: String!
   content: String!
-  year: Int!
+  world: World!
 }
 
 type Query {
- stories: [Story!]!
- testStories: [Story!]!
+  me: User
+  myWorlds: [World!]!
+  world(id: ID!): World
+  backstories(worldId: ID!): [Backstory!]!
 }
 
-
 type Mutation {
-  createStory(input: NewStory!): Story!
+  register(input: RegisterInput!): AuthPayload!
+  login(input: LoginInput!): AuthPayload!
+  createWorld(name: String!, description: String): World!
+  updateWorld(id: ID!, input: UpdateWorldInput!): World!
+  deleteWorld(id: ID!): Boolean!
+  saveBackstory(title: String!, content: String!, worldId: ID!): Backstory!
 }

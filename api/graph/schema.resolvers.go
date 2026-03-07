@@ -7,35 +7,221 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"os"
-	"encoding/json"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/jmoiron/sqlx"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/riuchek/api/graph/model"
 )
 
-// CreateStory is the resolver for the createStory field.
-func (r *mutationResolver) CreateStory(ctx context.Context, input model.NewStory) (*model.Story, error) {
-	panic(fmt.Errorf("not implemented: CreateStory - createStory"))
+var errUnauthorized = errors.New("unauthorized")
+
+func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthPayload, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	var id int
+	err = r.DB.QueryRowContext(ctx,
+		"INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id",
+		input.Username, input.Email, string(hash),
+	).Scan(&id)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique") {
+			return nil, errors.New("username or email already in use")
+		}
+		return nil, err
+	}
+	user := &model.User{
+		ID:       fmt.Sprint(id),
+		Username: input.Username,
+		Email:    input.Email,
+	}
+	token, err := r.signToken(user.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &model.AuthPayload{Token: token, User: user}, nil
 }
 
-// Stories is the resolver for the stories field.
-func (r *queryResolver) Stories(ctx context.Context) ([]*model.Story, error) {
-	panic(fmt.Errorf("not implemented: Stories - stories"))
+func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthPayload, error) {
+	var id int
+	var username, email, passwordHash string
+	err := r.DB.QueryRowContext(ctx,
+		"SELECT id, username, email, password FROM users WHERE email = $1", input.Email,
+	).Scan(&id, &username, &email, &passwordHash)
+	if err != nil {
+		return nil, errors.New("invalid email or password")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(input.Password)); err != nil {
+		return nil, errors.New("invalid email or password")
+	}
+	user := &model.User{
+		ID:       fmt.Sprint(id),
+		Username: username,
+		Email:    email,
+	}
+	token, err := r.signToken(user.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &model.AuthPayload{Token: token, User: user}, nil
 }
 
-// TestStories is the resolver for the testStories field.
-func (r *queryResolver) TestStories(ctx context.Context) ([]*model.Story, error) {
-	content, _ := os.ReadFile("data/test_stories.json")
-	var stories []*model.Story
-	json.Unmarshal(content, &stories)
-	return stories, nil
+func (r *mutationResolver) CreateWorld(ctx context.Context, name string, description *string) (*model.World, error) {
+	userID := userIDFromContext(ctx)
+	if userID == "" {
+		return nil, errUnauthorized
+	}
+	uid, err := strconv.Atoi(userID)
+	if err != nil {
+		return nil, errUnauthorized
+	}
+	var id int
+	err = r.DB.QueryRowContext(ctx,
+		"INSERT INTO worlds (name, description, user_id) VALUES ($1, $2, $3) RETURNING id",
+		name, description, uid,
+	).Scan(&id)
+	if err != nil {
+		return nil, err
+	}
+	return &model.World{
+		ID:          fmt.Sprint(id),
+		Name:        name,
+		Description: description,
+	}, nil
 }
 
-// Mutation returns MutationResolver implementation.
+func (r *mutationResolver) UpdateWorld(ctx context.Context, id string, input model.UpdateWorldInput) (*model.World, error) {
+	userID := userIDFromContext(ctx)
+	if userID == "" {
+		return nil, errUnauthorized
+	}
+	uid, _ := strconv.Atoi(userID)
+	if input.Name != nil {
+		_, err := r.DB.ExecContext(ctx,
+			"UPDATE worlds SET name = $1 WHERE id = $2 AND user_id = $3", *input.Name, id, uid,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if input.Description != nil {
+		_, err := r.DB.ExecContext(ctx,
+			"UPDATE worlds SET description = $1 WHERE id = $2 AND user_id = $3", *input.Description, id, uid,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return getWorldByID(ctx, r.DB, id)
+}
+
+func (r *mutationResolver) DeleteWorld(ctx context.Context, id string) (bool, error) {
+	userID := userIDFromContext(ctx)
+	if userID == "" {
+		return false, errUnauthorized
+	}
+	uid, _ := strconv.Atoi(userID)
+	res, err := r.DB.ExecContext(ctx, "DELETE FROM worlds WHERE id = $1 AND user_id = $2", id, uid)
+	if err != nil {
+		return false, err
+	}
+	n, _ := res.RowsAffected()
+	return n > 0, nil
+}
+
+func (r *mutationResolver) SaveBackstory(ctx context.Context, title string, content string, worldID string) (*model.Backstory, error) {
+	panic(fmt.Errorf("not implemented: SaveBackstory - saveBackstory"))
+}
+
+func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
+	userID := userIDFromContext(ctx)
+	if userID == "" {
+		return nil, nil
+	}
+	var id int
+	var username, email string
+	err := r.DB.QueryRowContext(ctx,
+		"SELECT id, username, email FROM users WHERE id = $1", userID,
+	).Scan(&id, &username, &email)
+	if err != nil {
+		return nil, nil
+	}
+	return &model.User{
+		ID:       fmt.Sprint(id),
+		Username: username,
+		Email:    email,
+	}, nil
+}
+
+func (r *queryResolver) MyWorlds(ctx context.Context) ([]*model.World, error) {
+	userID := userIDFromContext(ctx)
+	if userID == "" {
+		return []*model.World{}, nil
+	}
+	rows, err := r.DB.QueryxContext(ctx, "SELECT id::text as id, name, description FROM worlds WHERE user_id = $1", userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var worlds []*model.World
+	for rows.Next() {
+		var w model.World
+		if err := rows.StructScan(&w); err != nil {
+			return nil, err
+		}
+		worlds = append(worlds, &w)
+	}
+	return worlds, nil
+}
+
+func (r *queryResolver) World(ctx context.Context, id string) (*model.World, error) {
+	return getWorldByID(ctx, r.DB, id)
+}
+
+func (r *queryResolver) Backstories(ctx context.Context, worldID string) ([]*model.Backstory, error) {
+	panic(fmt.Errorf("not implemented: Backstories - backstories"))
+}
+
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
-
-// Query returns QueryResolver implementation.
-func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
+func (r *Resolver) Query() QueryResolver         { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+
+func (r *Resolver) signToken(userID string) (string, error) {
+	claims := jwt.RegisteredClaims{
+		Subject:   userID,
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(r.JWTSecret)
+}
+
+func userIDFromContext(ctx context.Context) string {
+	v := ctx.Value(UserIDKey)
+	if v == nil {
+		return ""
+	}
+	s, _ := v.(string)
+	return s
+}
+
+func getWorldByID(ctx context.Context, db *sqlx.DB, id string) (*model.World, error) {
+	var w model.World
+	err := db.QueryRowxContext(ctx,
+		"SELECT id::text as id, name, description FROM worlds WHERE id = $1", id,
+	).StructScan(&w)
+	if err != nil {
+		return nil, err
+	}
+	return &w, nil
+}

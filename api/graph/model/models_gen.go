@@ -2,21 +2,49 @@
 
 package model
 
-type Mutation struct {
+type AuthPayload struct {
+	Token string `json:"token"`
+	User  *User  `json:"user"`
 }
 
-type NewStory struct {
-	Title   string `json:"title"`
-	Content string `json:"content"`
-	Year    int32  `json:"year"`
+type Backstory struct {
+	ID            string `json:"id"`
+	Title         string `json:"title"`
+	CharacterName string `json:"characterName"`
+	Content       string `json:"content"`
+	World         *World `json:"world"`
+}
+
+type LoginInput struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type Mutation struct {
 }
 
 type Query struct {
 }
 
-type Story struct {
-	ID      string `json:"id"`
-	Title   string `json:"title"`
-	Content string `json:"content"`
-	Year    int32  `json:"year"`
+type RegisterInput struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type UpdateWorldInput struct {
+	Name        *string `json:"name,omitempty"`
+	Description *string `json:"description,omitempty"`
+}
+
+type User struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+}
+
+type World struct {
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty"`
 }
