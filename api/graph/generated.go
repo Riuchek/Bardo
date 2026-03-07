@@ -54,7 +54,7 @@ type ComplexityRoot struct {
 		DeleteWorld   func(childComplexity int, id string) int
 		Login         func(childComplexity int, input model.LoginInput) int
 		Register      func(childComplexity int, input model.RegisterInput) int
-		SaveBackstory func(childComplexity int, title string, content string, worldID string) int
+		SaveBackstory func(childComplexity int, title string, content string, worldID string, characterName string) int
 		UpdateWorld   func(childComplexity int, id string, input model.UpdateWorldInput) int
 	}
 
@@ -84,7 +84,7 @@ type MutationResolver interface {
 	CreateWorld(ctx context.Context, name string, description *string) (*model.World, error)
 	UpdateWorld(ctx context.Context, id string, input model.UpdateWorldInput) (*model.World, error)
 	DeleteWorld(ctx context.Context, id string) (bool, error)
-	SaveBackstory(ctx context.Context, title string, content string, worldID string) (*model.Backstory, error)
+	SaveBackstory(ctx context.Context, title string, content string, worldID string, characterName string) (*model.Backstory, error)
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
@@ -205,7 +205,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Mutation.SaveBackstory(childComplexity, args["title"].(string), args["content"].(string), args["worldId"].(string)), true
+		return e.ComplexityRoot.Mutation.SaveBackstory(childComplexity, args["title"].(string), args["content"].(string), args["worldId"].(string), args["characterName"].(string)), true
 	case "Mutation.updateWorld":
 		if e.ComplexityRoot.Mutation.UpdateWorld == nil {
 			break
@@ -464,6 +464,11 @@ func (ec *executionContext) field_Mutation_saveBackstory_args(ctx context.Contex
 		return nil, err
 	}
 	args["worldId"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "characterName", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["characterName"] = arg3
 	return args, nil
 }
 
@@ -1028,7 +1033,7 @@ func (ec *executionContext) _Mutation_saveBackstory(ctx context.Context, field g
 		ec.fieldContext_Mutation_saveBackstory,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().SaveBackstory(ctx, fc.Args["title"].(string), fc.Args["content"].(string), fc.Args["worldId"].(string))
+			return ec.Resolvers.Mutation().SaveBackstory(ctx, fc.Args["title"].(string), fc.Args["content"].(string), fc.Args["worldId"].(string), fc.Args["characterName"].(string))
 		},
 		nil,
 		ec.marshalNBackstory2ᚖgithubᚗcomᚋriuchekᚋapiᚋgraphᚋmodelᚐBackstory,
