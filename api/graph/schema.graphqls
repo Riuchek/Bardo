@@ -52,5 +52,5 @@ type Mutation {
   createWorld(name: String!, description: String): World!
   updateWorld(id: ID!, input: UpdateWorldInput!): World!
   deleteWorld(id: ID!): Boolean!
-  saveBackstory(title: String!, content: String!, worldId: ID!): Backstory!
+  saveBackstory(title: String!, content: String!, worldId: ID!, characterName: String!): Backstory!
 }

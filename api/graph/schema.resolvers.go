@@ -11,17 +11,12 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
-
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/jmoiron/sqlx"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/riuchek/api/graph/model"
+	"golang.org/x/crypto/bcrypt"
 )
 
-var errUnauthorized = errors.New("unauthorized")
-
+// Register is the resolver for the register field.
 func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthPayload, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -50,6 +45,7 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 	return &model.AuthPayload{Token: token, User: user}, nil
 }
 
+// Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthPayload, error) {
 	var id int
 	var username, email, passwordHash string
@@ -74,6 +70,7 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 	return &model.AuthPayload{Token: token, User: user}, nil
 }
 
+// CreateWorld is the resolver for the createWorld field.
 func (r *mutationResolver) CreateWorld(ctx context.Context, name string, description *string) (*model.World, error) {
 	userID := userIDFromContext(ctx)
 	if userID == "" {
@@ -98,6 +95,7 @@ func (r *mutationResolver) CreateWorld(ctx context.Context, name string, descrip
 	}, nil
 }
 
+// UpdateWorld is the resolver for the updateWorld field.
 func (r *mutationResolver) UpdateWorld(ctx context.Context, id string, input model.UpdateWorldInput) (*model.World, error) {
 	userID := userIDFromContext(ctx)
 	if userID == "" {
@@ -123,6 +121,7 @@ func (r *mutationResolver) UpdateWorld(ctx context.Context, id string, input mod
 	return getWorldByID(ctx, r.DB, id)
 }
 
+// DeleteWorld is the resolver for the deleteWorld field.
 func (r *mutationResolver) DeleteWorld(ctx context.Context, id string) (bool, error) {
 	userID := userIDFromContext(ctx)
 	if userID == "" {
@@ -137,10 +136,41 @@ func (r *mutationResolver) DeleteWorld(ctx context.Context, id string) (bool, er
 	return n > 0, nil
 }
 
-func (r *mutationResolver) SaveBackstory(ctx context.Context, title string, content string, worldID string) (*model.Backstory, error) {
-	panic(fmt.Errorf("not implemented: SaveBackstory - saveBackstory"))
+// SaveBackstory is the resolver for the saveBackstory field.
+func (r *mutationResolver) SaveBackstory(ctx context.Context, title string, content string, worldID string, characterName string) (*model.Backstory, error) {
+	userID := userIDFromContext(ctx)
+	if userID == "" {
+		return nil, errUnauthorized
+	}
+	var worldIDCheck int
+	err := r.DB.QueryRowContext(ctx,
+		"SELECT id FROM worlds WHERE id = $1 AND user_id = $2", worldID, userID,
+	).Scan(&worldIDCheck)
+	if err != nil {
+		return nil, errors.New("world not found or access denied")
+	}
+	var id int
+	err = r.DB.QueryRowContext(ctx,
+		"INSERT INTO backstories (title, character_name, content, world_id) VALUES ($1, $2, $3, $4) RETURNING id",
+		title, characterName, content, worldID,
+	).Scan(&id)
+	if err != nil {
+		return nil, err
+	}
+	world, err := getWorldByID(ctx, r.DB, worldID)
+	if err != nil {
+		return nil, err
+	}
+	return &model.Backstory{
+		ID:            fmt.Sprint(id),
+		Title:         title,
+		CharacterName: characterName,
+		Content:       content,
+		World:         world,
+	}, nil
 }
 
+// Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	userID := userIDFromContext(ctx)
 	if userID == "" {
@@ -161,6 +191,7 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	}, nil
 }
 
+// MyWorlds is the resolver for the myWorlds field.
 func (r *queryResolver) MyWorlds(ctx context.Context) ([]*model.World, error) {
 	userID := userIDFromContext(ctx)
 	if userID == "" {
@@ -182,46 +213,48 @@ func (r *queryResolver) MyWorlds(ctx context.Context) ([]*model.World, error) {
 	return worlds, nil
 }
 
+// World is the resolver for the world field.
 func (r *queryResolver) World(ctx context.Context, id string) (*model.World, error) {
 	return getWorldByID(ctx, r.DB, id)
 }
 
+// Backstories is the resolver for the backstories field.
 func (r *queryResolver) Backstories(ctx context.Context, worldID string) ([]*model.Backstory, error) {
-	panic(fmt.Errorf("not implemented: Backstories - backstories"))
-}
-
-func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
-func (r *Resolver) Query() QueryResolver         { return &queryResolver{r} }
-
-type mutationResolver struct{ *Resolver }
-type queryResolver struct{ *Resolver }
-
-func (r *Resolver) signToken(userID string) (string, error) {
-	claims := jwt.RegisteredClaims{
-		Subject:   userID,
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(r.JWTSecret)
-}
-
-func userIDFromContext(ctx context.Context) string {
-	v := ctx.Value(UserIDKey)
-	if v == nil {
-		return ""
-	}
-	s, _ := v.(string)
-	return s
-}
-
-func getWorldByID(ctx context.Context, db *sqlx.DB, id string) (*model.World, error) {
-	var w model.World
-	err := db.QueryRowxContext(ctx,
-		"SELECT id::text as id, name, description FROM worlds WHERE id = $1", id,
-	).StructScan(&w)
+	world, err := getWorldByID(ctx, r.DB, worldID)
 	if err != nil {
 		return nil, err
 	}
-	return &w, nil
+	rows, err := r.DB.QueryxContext(ctx,
+		`SELECT b.id::text as id, b.title as title, b.character_name as "characterName", b.content as content
+		 FROM backstories b WHERE b.world_id = $1 ORDER BY b.id`,
+		worldID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var list []*model.Backstory
+	for rows.Next() {
+		var id, title, characterName, content string
+		if err := rows.Scan(&id, &title, &characterName, &content); err != nil {
+			return nil, err
+		}
+		list = append(list, &model.Backstory{
+			ID:            id,
+			Title:         title,
+			CharacterName: characterName,
+			Content:       content,
+			World:         world,
+		})
+	}
+	return list, nil
 }
+
+// Mutation returns MutationResolver implementation.
+func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
+
+// Query returns QueryResolver implementation.
+func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
+
+type mutationResolver struct{ *Resolver }
+type queryResolver struct{ *Resolver }
