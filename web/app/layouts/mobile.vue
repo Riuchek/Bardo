@@ -4,6 +4,12 @@
 
 <template>
   <div>
-    <h1>home</h1>
+    <slot />
   </div>
 </template>
+
+
+
+<style lang="scss" scoped>
+
+</style>
