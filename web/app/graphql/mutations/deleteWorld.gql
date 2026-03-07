@@ -1,0 +1,3 @@
+mutation DeleteWorld($id: ID!) {
+  deleteWorld(id: $id)
+}

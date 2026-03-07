@@ -1,0 +1,13 @@
+query Backstories($worldId: ID!) {
+  backstories(worldId: $worldId) {
+    id
+    title
+    characterName
+    content
+    world {
+      id
+      name
+      description
+    }
+  }
+}

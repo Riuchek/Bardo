@@ -1,7 +1,0 @@
-query GetTodos {
-  todos {
-    id
-    text
-    done
-  }
-}
