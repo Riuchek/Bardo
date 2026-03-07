@@ -1,7 +1,0 @@
-query MyWorlds {
-  myWorlds {
-    id
-    name
-    description
-  }
-}

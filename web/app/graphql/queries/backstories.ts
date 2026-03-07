@@ -1,4 +1,7 @@
-query Backstories($worldId: ID!) {
+import { gql } from 'graphql-request';
+
+export const backstoriesQuery = gql`
+  query Backstories($worldId: ID!) {
   backstories(worldId: $worldId) {
     id
     title
@@ -11,3 +14,4 @@ query Backstories($worldId: ID!) {
     }
   }
 }
+`;

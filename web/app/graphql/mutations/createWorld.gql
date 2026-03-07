@@ -1,7 +1,0 @@
-mutation CreateWorld($name: String!, $description: String) {
-  createWorld(name: $name, description: $description) {
-    id
-    name
-    description
-  }
-}
