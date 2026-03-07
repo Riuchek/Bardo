@@ -2,56 +2,84 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/riuchek/api/config"
 	"github.com/riuchek/api/graph"
 )
 
-const defaultPort = "8080"
-
 func main() {
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_NAME"),
-	)
-
-	db, err := sqlx.Connect("postgres", dsn)
+	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Erro ao conectar no banco: %v", err)
+		log.Fatalf("config: %v", err)
+	}
+
+	db, err := sqlx.Connect("postgres", cfg.DSN())
+	if err != nil {
+		log.Fatalf("db: %v", err)
 	}
 	defer db.Close()
 
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		jwtSecret = "change-me-in-production"
-	}
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = defaultPort
-	}
-
 	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{
-		Resolvers: &graph.Resolver{DB: db, JWTSecret: []byte(jwtSecret)},
+		Resolvers: &graph.Resolver{DB: db, JWTSecret: []byte(cfg.JWTSecret)},
 	}))
 
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", authMiddleware([]byte(jwtSecret), srv))
+	mux := http.NewServeMux()
+	mux.Handle("/", playground.Handler("GraphQL playground", "/query"))
+	mux.Handle("/query", authMiddleware([]byte(cfg.JWTSecret), srv))
+	mux.HandleFunc("/health", healthHandler(db))
 
-	log.Printf("Bardo API pronta em http://localhost:%s/", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	server := &http.Server{
+		Addr:              ":" + cfg.Port,
+		Handler:           mux,
+		ReadHeaderTimeout:  10 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	go func() {
+		log.Printf("Bardo API listening on http://localhost:%s/", cfg.Port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("server: %v", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		log.Printf("shutdown: %v", err)
+	}
+	log.Print("Bardo API stopped")
+}
+
+func healthHandler(db *sqlx.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if err := db.PingContext(r.Context()); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}
 }
 
 func authMiddleware(secret []byte, next http.Handler) http.Handler {

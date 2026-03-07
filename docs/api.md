@@ -31,6 +31,7 @@ docker compose up -d
 ```
 
 - **API:** http://localhost:8080 (Playground em `/`, endpoint GraphQL em `/query`)
+- **Health check:** http://localhost:8080/health (GET; retorna 200 se o banco estiver acessível, 503 caso contrário)
 - **PostgreSQL:** porta 5432
 - **Frontend (Nuxt):** http://localhost:3000
 
@@ -81,7 +82,9 @@ Em resumo:
 
 ```
 api/
-├── server.go              # Entrada HTTP, conexão DB, middleware de auth, rota /query
+├── server.go              # Entrada HTTP, rotas, middleware de auth, graceful shutdown
+├── config/
+│   └── config.go          # Carrega e valida variáveis de ambiente (Load, DSN, Validate)
 ├── graph/
 │   ├── schema.graphqls    # Schema GraphQL (tipos, queries, mutations)
 │   ├── schema.resolvers.go # Implementação dos resolvers (regras de negócio)
@@ -96,6 +99,7 @@ api/
 
 - **Resolver root:** `graph.Resolver` contém `DB` e `JWTSecret`; é injetado em todos os resolvers (via `mutationResolver` e `queryResolver` que embutem `*Resolver`).
 - **Helpers:** funções compartilhadas (auth e leitura de world) ficam em `helpers.go` para não serem sobrescritas pelo `gqlgen generate`.
+- **Config:** ao subir, a API valida `DB_*` obrigatórios; se faltar alguma, falha no startup. `GET /health` faz ping no banco (200/503). Graceful shutdown em SIGINT/SIGTERM (até 10s para requisições em curso).
 
 ---
 
@@ -258,3 +262,11 @@ query { backstories(worldId: "1") { id title characterName content world { id na
 5. **Token** JWT com `sub` = ID do usuário; expira em 24h; secret em `JWT_SECRET`.
 
 Para mais detalhes do schema, use o GraphQL Playground em http://localhost:8080 (documentação e autocomplete).
+
+---
+
+## Backend: TO DOs
+
+**Já feito:** config centralizada (`config/`), health check (`GET /health`), graceful shutdown e timeouts HTTP.
+
+**Opcional (depois):** testes (unitários/integração), migrations para evoluir o schema, logging estruturado (slog), validação de inputs (senha/email), rate limiting.
