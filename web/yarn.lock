@@ -1036,6 +1036,13 @@
     pkg-types "^1.2.1"
     semver "^7.6.3"
 
+"@nuxtjs/device@4.0.0":
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/@nuxtjs/device/-/device-4.0.0.tgz#1ab5a96723690e9d0c33cf35b91edf1b7fac1f1d"
+  integrity sha512-Tkbvde/GInmigbS/n3X3X+qXJWi6hsYrViKpZrakaBBYY3NbGYJb0c8aVxd3vI636HBbOhu0I39rv7MSjP7w8Q==
+  dependencies:
+    defu "^6.1.4"
+
 "@oxc-minify/binding-android-arm-eabi@0.112.0":
   version "0.112.0"
   resolved "https://registry.yarnpkg.com/@oxc-minify/binding-android-arm-eabi/-/binding-android-arm-eabi-0.112.0.tgz#db0caab1f03ed94c9a75850867be0d5ce8fcce51"
