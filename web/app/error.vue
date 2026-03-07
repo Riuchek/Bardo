@@ -1,11 +1,12 @@
+<script lang="ts" setup>
+const props = defineProps(['error'])
+</script>
+
+
 <template>
   <div>
      <UError
-    :error="{
-      statusCode: 404,
-      statusMessage: 'Page not found',
-      message: 'The page you are looking for does not exist.'
-    }"
+    :error="props.error"
   />
   </div>
 </template>
