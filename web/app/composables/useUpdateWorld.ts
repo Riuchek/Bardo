@@ -1,13 +1,11 @@
-import { updateWorldMutation } from '~/graphql/mutations/updateWorld';
+import { updateWorldMutation } from '~/gql/mutations/updateWorld';
 import type { UpdateWorldInput, World } from '~/types/bardo';
-import { useGqlClient } from './useGqlClient';
 
 interface UpdateWorldResult {
   updateWorld: World;
 }
 
 export function useUpdateWorld() {
-  const { request } = useGqlClient();
   const pending = ref(false);
   const error = ref<Error | null>(null);
 
@@ -15,10 +13,10 @@ export function useUpdateWorld() {
     pending.value = true;
     error.value = null;
     try {
-      const data = await request<UpdateWorldResult, { id: string; input: UpdateWorldInput }>(
-        updateWorldMutation as never,
-        { id, input }
-      );
+      const data = await useMutation<UpdateWorldResult>(updateWorldMutation, {
+        id,
+        input,
+      });
       if (data?.updateWorld) {
         return data.updateWorld;
       }

@@ -1,14 +1,12 @@
-import { loginMutation } from '~/graphql/mutations/login';
+import { loginMutation } from '~/gql/mutations/login';
 import { useUserStore } from '~/stores/user';
 import type { AuthPayload, LoginInput } from '~/types/bardo';
-import { useGqlClient } from './useGqlClient';
 
 interface LoginResult {
   login: AuthPayload;
 }
 
 export function useLogin() {
-  const { request } = useGqlClient();
   const userStore = useUserStore();
   const pending = ref(false);
   const error = ref<Error | null>(null);
@@ -17,10 +15,7 @@ export function useLogin() {
     pending.value = true;
     error.value = null;
     try {
-      const data = await request<LoginResult, { input: LoginInput }>(
-        loginMutation as never,
-        { input }
-      );
+      const data = await useMutation<LoginResult>(loginMutation, { input });
       if (data?.login) {
         userStore.setAuth({
           user: data.login.user,

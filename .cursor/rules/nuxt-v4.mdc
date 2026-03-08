@@ -1,0 +1,38 @@
+---
+description: Nuxt 4 standards for Bardo web
+globs:
+  - "web/**/*.vue"
+  - "web/**/*.ts"
+  - "web/app/**/*"
+  - "web/server/**/*"
+alwaysApply: true
+---
+
+# Nuxt 4 Application Standards
+
+## Project layout
+- Feature pages in `pages/`, shared UI in `components/`, domain logic in `composables/`, API and proxy in `server/`.
+- Use `nuxt.config.ts` as the single source for modules, aliases, runtime config.
+
+## Composition and data
+- Use `<script setup lang="ts">`; move complex logic into composables.
+- Prefer Nuxt auto-imports; add explicit imports when needed for types or clarity.
+- Use `useAsyncData` / `useLazyFetch` with appropriate `key`, `server`, and `transform` when fetching in composables.
+- Use `useFetch` for SSR-aware GET-like flows; use `$fetch` (or `$gql`) for client-triggered requests (e.g. mutations).
+
+## Routing and meta
+- Set metadata with `definePageMeta` and `useHead`.
+- Use middleware in `definePageMeta` for auth or layout checks.
+
+## State and API
+- Use Pinia for cross-route state; keep stores serializable for SSR.
+- Access API via composables that call `/api/gql` with the shared `$gql` client (auth headers, error handling).
+- Use `createError` / proper status codes on the server; surface user-friendly errors on the client.
+
+## Tooling
+- Run ESLint (and Prettier if configured) before pushing; fix lint in code, do not disable rules without reason.
+- Prefer Vitest with `@nuxt/test-utils` for unit/component tests next to source.
+
+## Performance
+- Use `defineAsyncComponent`, `<Suspense>`, and lazy loading where it helps.
+- Use `<NuxtImage>` when handling images.
