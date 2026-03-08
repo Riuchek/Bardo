@@ -1,0 +1,62 @@
+---
+description: Vue.js and Nuxt patterns for Bardo web app
+globs:
+  - "web/**/*.vue"
+  - "web/**/*.ts"
+  - "web/app/**/*"
+alwaysApply: true
+---
+
+# Vue.js and Nuxt Standards (Bardo)
+
+## State management: Pinia + composables
+
+**Rule:** Pages and components **never** call `useXxxStore()` directly. They use only composables. Stores are used inside composables or in plugins/middleware.
+
+**Layers:**
+```
+Components (UI) → Composables (logic) → Stores (state)
+```
+
+**Data flow:** Component → Composable → Store (and back via composable).
+
+## File structure
+
+```
+web/app/
+├── store/           # Pinia stores (e.g. user)
+├── composables/     # useLogin, useGql, useSaveBackstory, etc.
+├── gql/
+│   ├── queries/     # GraphQL queries (e.g. me.ts, backstories.ts)
+│   └── mutations/   # GraphQL mutations (e.g. login.ts, saveBackstory.ts)
+├── types/           # Shared TypeScript types
+├── pages/
+├── components/
+├── layouts/
+└── plugins/
+```
+
+**Naming:** kebab-case for files, PascalCase for components and types. Stores: `useXxxStore`. Composables: `useXxx`.
+
+## GraphQL usage
+
+- **Queries:** Use `useQuery<T>(query, variables)` from `useGql` for fetching. Prefer `useFetch`-backed usage when using `useQuery`.
+- **Mutations:** Use `useMutation<T>(mutation, variables)` from `useGql`; returns a Promise. Call it from composables (e.g. `useLogin` calls `useMutation(loginMutation, { input })` then updates the user store).
+- **Definitions:** Each operation lives in a single file under `gql/queries/` or `gql/mutations/`, exporting a `gql`-tagged document.
+- **Server:** All client requests go through the app proxy `POST /api/gql`. The server forwards to the GraphQL upstream with auth headers and uses a shared GraphQL error handler.
+
+## Composables pattern
+
+- Composables expose state (refs/computed) and actions (functions). They use the store internally and optionally `useQuery` / `useMutation`.
+- Example: `useLogin()` returns `{ login, pending, error }`; `login` calls the mutation then updates the user store.
+
+## TypeScript and Vue
+
+- Use `<script setup lang="ts">`, explicit types for composable return values and props.
+- Use `import type` for type-only imports.
+- Prefer interfaces for objects.
+
+## Testing
+
+- Tests next to the code they cover; names and descriptions in English.
+- Mock `$gql` or the GQL layer when testing composables that call GraphQL.

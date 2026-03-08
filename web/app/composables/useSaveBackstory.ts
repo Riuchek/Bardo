@@ -1,13 +1,11 @@
-import { saveBackstoryMutation } from '~/graphql/mutations/saveBackstory';
+import { saveBackstoryMutation } from '~/gql/mutations/saveBackstory';
 import type { Backstory } from '~/types/bardo';
-import { useGqlClient } from './useGqlClient';
 
 interface SaveBackstoryResult {
   saveBackstory: Backstory;
 }
 
 export function useSaveBackstory() {
-  const { request } = useGqlClient();
   const pending = ref(false);
   const error = ref<Error | null>(null);
 
@@ -20,10 +18,7 @@ export function useSaveBackstory() {
     pending.value = true;
     error.value = null;
     try {
-      const data = await request<
-        SaveBackstoryResult,
-        { title: string; content: string; worldId: string; characterName: string }
-      >(saveBackstoryMutation as never, {
+      const data = await useMutation<SaveBackstoryResult>(saveBackstoryMutation, {
         title,
         content,
         worldId,

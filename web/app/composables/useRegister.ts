@@ -1,14 +1,12 @@
-import { registerMutation } from '~/graphql/mutations/register';
+import { registerMutation } from '~/gql/mutations/register';
 import { useUserStore } from '~/stores/user';
 import type { AuthPayload, RegisterInput } from '~/types/bardo';
-import { useGqlClient } from './useGqlClient';
 
 interface RegisterResult {
   register: AuthPayload;
 }
 
 export function useRegister() {
-  const { request } = useGqlClient();
   const userStore = useUserStore();
   const pending = ref(false);
   const error = ref<Error | null>(null);
@@ -17,10 +15,9 @@ export function useRegister() {
     pending.value = true;
     error.value = null;
     try {
-      const data = await request<RegisterResult, { input: RegisterInput }>(
-        registerMutation as never,
-        { input }
-      );
+      const data = await useMutation<RegisterResult>(registerMutation, {
+        input,
+      });
       if (data?.register) {
         userStore.setAuth({
           user: data.register.user,

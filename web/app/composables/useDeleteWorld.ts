@@ -1,12 +1,10 @@
-import { deleteWorldMutation } from '~/graphql/mutations/deleteWorld';
-import { useGqlClient } from './useGqlClient';
+import { deleteWorldMutation } from '~/gql/mutations/deleteWorld';
 
 interface DeleteWorldResult {
   deleteWorld: boolean;
 }
 
 export function useDeleteWorld() {
-  const { request } = useGqlClient();
   const pending = ref(false);
   const error = ref<Error | null>(null);
 
@@ -14,10 +12,9 @@ export function useDeleteWorld() {
     pending.value = true;
     error.value = null;
     try {
-      const data = await request<DeleteWorldResult, { id: string }>(
-        deleteWorldMutation as never,
-        { id }
-      );
+      const data = await useMutation<DeleteWorldResult>(deleteWorldMutation, {
+        id,
+      });
       return data?.deleteWorld ?? false;
     } catch (e) {
       error.value = e instanceof Error ? e : new Error(String(e));
