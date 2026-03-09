@@ -23,6 +23,8 @@ export function useRegister() {
           user: data.register.user,
           token: data.register.token,
         });
+        const { set } = useAuthCookie();
+        set(data.register.token, data.register.user);
         return data.register;
       }
       throw new Error('Invalid response');

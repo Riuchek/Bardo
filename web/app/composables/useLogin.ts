@@ -21,6 +21,8 @@ export function useLogin() {
           user: data.login.user,
           token: data.login.token,
         });
+        const { set } = useAuthCookie();
+        set(data.login.token, data.login.user);
         return data.login;
       }
       throw new Error('Invalid response');

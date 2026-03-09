@@ -6,7 +6,6 @@
   <div>
     <HeaderDesktop />
     <slot />
-    <FooterDesktop />
   </div>
 </template>
 

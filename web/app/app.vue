@@ -8,7 +8,7 @@ const layout = computed(() => {
 
 <template>
   <div>
-    <NuxtLayout :layout="layout">
+    <NuxtLayout :name="layout">
       <NuxtPage />
     </NuxtLayout>
   </div>
